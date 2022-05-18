@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Draw a rectangle</title>
+</head>
+
+<body onload="init()">
+    <canvas id="myCanvas" width="800" height="700"></canvas>
+</body>
+
+<script id="shaderVs" type="x-shader/x-vertex">
+    attribute vec4 a_Position;
+    void main() {
+        gl_Position = a_Position;
+    }
+</script>
+
+<script id="shaderFs" type="x-shader/x-fragment">
+    precision mediump float;
+    uniform vec4 u_FragColor;
+    void main() {
+        gl_FragColor = u_FragColor;
+    }
+</script>
+
+<script>
+    function init() {
+        // Get canvas object from the DOM
+        var canvas = document.getElementById("myCanvas");
+
+        // Init WebGL context
+        var gl = canvas.getContext("webgl");
+        if (!gl) {
+            console.log("Failed to get the rendering context for WebGL");
+            return;
+        }
+
+        // Init shaders
+        var vs = document.getElementById('shaderVs').innerHTML;
+        var fs = document.getElementById('shaderFs').innerHTML;
+        if (!initShaders(gl, vs, fs)) {
+            console.log('Failed to intialize shaders.');
+            return;
+        }
+
+        // Write the positions of vertices to a vertex shader
+
+    var N = 100;
+    var vertexData = [];
+    var r = 0.4;
+
+    for (var i = -1; i <= N; i++) {
+        var theta = i * 2 * Math.PI / N;
+        console.log(theta);
+        var x = r * Math.sin(theta);
+        var y = r * Math.cos(theta);
+        vertexData.push(x+0.4, y+0.5);
+    }
+
+    var vertices1 = new Float32Array(vertexData);
+    console.log(vertices1);
+    initVertexBuffers1(gl, vertices1);
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.drawArrays(gl.TRIANGLE_FAN, 0, vertices1.length / 2);
+        var n = initVertexBuffers(gl,-0.6,0,0.1,-0.3,0.3,0.0);
+        if (n < 0) {
+            console.log('Failed to set the positions of the vertices');
+            return;
+        }
+        
+        // Clear canvas
+        gl.clearColor(0.0, 0.0, 0.0, 1.0) ;
+        gl.clear(gl.COLOR_BUFFER_BIT);
+
+        // Draw
+        gl.drawArrays(gl.TRIANGLES, 0, n);
+        
+        //gl.drawArrays(gl.TRIANGLES, 0, n1);
+    }
+    function initVertexBuffers1(gl, vertices1) {
+        var vertexBuffer = gl.createBuffer();
+        if (!vertexBuffer) {
+            console.log('Failed to create buffer object');
+            return -1;
+        }
+
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices1, gl.STATIC_DRAW);
+
+        var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+
+        gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, true, -0.8, 0);
+        gl.enableVertexAttribArray(a_Position);
+    }
+
+    function initVertexBuffers(gl,r,s,r2,s2,r1,s1) {
+        // Vertices
+        var dim = 2; 
+       
+        var vertices = new Float32Array([
+            -0.3+r, 0.3+s, 0.3+r, 0.3+s, 0.3+r, -0.3+s, // Triangle 1
+            -0.3+r, 0.3+s, 0.3+r, -0.3+s, -0.3+r, -0.3+s,
+             0.3+r, 0.3+s2, -0.3+r1, 0.3+s2, -0.3+r1, -0.3+r2, // Triangle 1
+             0.3+r, 0.3+s2, -0.3+r1, -0.3+r2, -0.3+r, -0.3+r2,
+            -0.3+r1, 0.3+s1, 0.3+r1, 0.3+s1, 0.3+r1, -0.3+s1, // Triangle 1
+            -0.3+r1, 0.3+s1, 0.3+r1, -0.3+s1, -0.3+r1, -0.3+s1
+            // Triangle 2 
+        ]);
+
+        // Fragment color
+        var rgba = [0.0, 1, 0.0, 1.0];
+
+        // Create a buffer object
+        var vertexBuffer = gl.createBuffer();
+        if (!vertexBuffer) {
+            console.log('Failed to create the buffer object');
+            return -1;
+        }
+        gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+        gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+        // Assign the vertices in buffer object to a_Position variable
+        var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+        if (a_Position < 0) {
+            console.log('Failed to get the storage location of a_Position');
+            return -1;
+        }
+        gl.vertexAttribPointer(a_Position, dim, gl.FLOAT, false, 0, 0);
+        gl.enableVertexAttribArray(a_Position);
+
+        // Assign the color to u_FragColor variable
+        var u_FragColor = gl.getUniformLocation(gl.program, 'u_FragColor');
+        if (u_FragColor < 0) {
+            console.log('Failed to get the storage location of u_FragColor');
+            return -1;
+        }
+        gl.uniform4fv(u_FragColor, rgba);
+
+        // Return number of vertices
+        return vertices.length / dim;
+    }
+
+    function initShaders(gl, vs_source, fs_source) {
+        // Compile shaders
+        var vertexShader = makeShader(gl, vs_source, gl.VERTEX_SHADER);
+        var fragmentShader = makeShader(gl, fs_source, gl.FRAGMENT_SHADER);
+
+        // Create program
+        var glProgram = gl.createProgram();
+
+        // Attach and link shaders to the program
+        gl.attachShader(glProgram, vertexShader);
+        gl.attachShader(glProgram, fragmentShader);
+        gl.linkProgram(glProgram);
+        if (!gl.getProgramParameter(glProgram, gl.LINK_STATUS)) {
+            alert("Unable to initialize the shader program");
+            return false;
+        }
+
+        // Use program
+        gl.useProgram(glProgram);
+        gl.program = glProgram;
+
+        return true;
+    }
+
+    function makeShader(gl, src, type) {
+        var shader = gl.createShader(type);
+        gl.shaderSource(shader, src);
+        gl.compileShader(shader);
+        if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+            alert("Error compiling shader: " + gl.getShaderInfoLog(shader));
+            return;
+        }
+        return shader;
+    }
+</script>
+
+</html>
